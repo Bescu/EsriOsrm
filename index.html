@@ -44,6 +44,7 @@
 						map.graphics.clear();
 						mapPointStart = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
 						var pointClick = new Point(mapPointStart.x, mapPointStart.y, new SpatialReference({'wkid': 4326}));
+						console.log(pointClick);
 						var marker = new PictureMarkerSymbol("markerGreen.png",287/12,440/12);
 						marker.setOffset(0,14);
 						var graphicStart = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointStart), marker);
@@ -52,6 +53,7 @@
 					} else if (clickCounter == 1){
 						var mapPointEnd = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
 						var pointClick = new Point(mapPointEnd.x, mapPointEnd.y, new SpatialReference({'wkid': 4326}));
+						console.log(pointClick);
 						var marker = new PictureMarkerSymbol("markerRed.png",287/12,440/12);
 						var graphicEnd = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointEnd), marker);
 						map.graphics.add(graphicEnd);
@@ -61,11 +63,37 @@
 						var yStart = mapPointStart.y;
 						var xEnd = mapPointEnd.x;
 						var yEnd = mapPointEnd.y;
-						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd + "?overview=false";
+						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd;
 						console.log(urlOsrm);
-						request.get(urlOsrm).then(function(response){
+						request(urlOsrm, {
+							headers: {
+								"X-Requested-With": null
+							},
+							withCredentials: true
+						}).then(function(response){
 							console.log(response);
 						});
+						/*geoJson = `{
+  "distance": 90.0,
+  "duration": 300.0,
+  "weight": 300.0,
+  "weight_name": "duration",
+  "geometry": {"type": "LineString", "coordinates": [[3.0252, 50.6247], [3.0355, 50.6245], [3.0585, 50.6373], [3.0992, 50.6287]]},
+  "legs": [
+    {
+      "distance": 30.0,
+      "duration": 100.0,
+      "steps": []
+    },
+    {
+      "distance": 60.0,
+      "duration": 200.0,
+      "steps": []
+    }
+  ]
+}`;
+						geoJson = JSON.parse(geoJson);
+						console.log(geoJson);*/
 					}
 				}
 			});

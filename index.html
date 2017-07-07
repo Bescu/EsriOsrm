@@ -61,7 +61,7 @@
 						var yStart = mapPointStart.y;
 						var xEnd = mapPointEnd.x;
 						var yEnd = mapPointEnd.y;
-						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd + "?overview=false&callback=?";
+						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd + "?overview=false";
 						console.log(urlOsrm);
 						request.get(urlOsrm).then(function(response){
 							console.log(response);

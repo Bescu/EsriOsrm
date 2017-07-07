@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+		<title>OSMR Test</title>
+		
+		<!-- library API ESRI -->
+		<link rel="stylesheet" href="https://js.arcgis.com/3.21/esri/css/esri.css">
+		<link rel="stylesheet" href="https://js.arcgis.com/3.21/dijit/themes/claro/claro.css">
+		<script src="https://js.arcgis.com/3.21/"></script>
+		
+		<!-- style -->
+		<style>
+		html, body, #map {
+			height: 100%;
+			padding: 0;
+			margin: 0;
+		}
+		</style>
+				
+		<!-- Map -->
+		<script>
+			var map;
+			require(["esri/map",
+				"dojo/domReady!",
+				"esri/geometry/webMercatorUtils", 
+				"esri/symbols/PictureMarkerSymbol",
+				"esri/geometry/Point",
+				"esri/SpatialReference",
+				"esri/graphic",
+				"dojo/request"], function(Map, dom, webMercatorUtils, PictureMarkerSymbol, Point, SpatialReference, Graphic, request) {
+				map = new Map("map", {
+					basemap: "topo",
+					center: [3.05563,50.63188],
+					zoom: 13
+				});
+				
+				map.on("click", clickFonction);
+				
+				clickCounter = 0;
+				function clickFonction(evt){
+					if (clickCounter == 0){
+						map.graphics.clear();
+						mapPointStart = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
+						var pointClick = new Point(mapPointStart.x, mapPointStart.y, new SpatialReference({'wkid': 4326}));
+						var marker = new PictureMarkerSymbol("markerGreen.png",287/12,440/12);
+						marker.setOffset(0,14);
+						var graphicStart = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointStart), marker);
+						map.graphics.add(graphicStart);						
+						clickCounter += 1;
+					} else if (clickCounter == 1){
+						var mapPointEnd = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
+						var pointClick = new Point(mapPointEnd.x, mapPointEnd.y, new SpatialReference({'wkid': 4326}));
+						var marker = new PictureMarkerSymbol("markerRed.png",287/12,440/12);
+						var graphicEnd = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointEnd), marker);
+						map.graphics.add(graphicEnd);
+						clickCounter = 0;
+						
+						var xStart = mapPointStart.x;
+						var yStart = mapPointStart.y;
+						var xEnd = mapPointEnd.x;
+						var yEnd = mapPointEnd.y;
+						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd + "?overview=false&callback=?";
+						console.log(urlOsrm);
+						request.get(urlOsrm).then(function(response){
+							console.log(response);
+						});
+					}
+				}
+			});
+		</script>
+	</head>
+	
+	<body class="claro">
+		<div id="map"></div>
+	</body>	
+	
+</html>

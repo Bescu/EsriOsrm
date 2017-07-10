@@ -18,82 +18,126 @@
 			margin: 0;
 		}
 		</style>
-				
+		
+		<!-- Decode function encoded polyline -->
+		<script>
+			// source: https://gist.github.com/ismaels/6636986
+			function decode(encoded){
+
+				// array that holds the points
+
+				var points=[ ]
+				var index = 0, len = encoded.length;
+				var lat = 0, lng = 0;
+				while (index < len) {
+					var b, shift = 0, result = 0;
+					do {
+
+				b = encoded.charAt(index++).charCodeAt(0) - 63;//finds ascii and substract it by 63
+						  result |= (b & 0x1f) << shift;
+						  shift += 5;
+						 } while (b >= 0x20);
+
+
+				   var dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+				   lat += dlat;
+				  shift = 0;
+				  result = 0;
+				 do {
+					b = encoded.charAt(index++).charCodeAt(0) - 63;
+					result |= (b & 0x1f) << shift;
+				   shift += 5;
+					 } while (b >= 0x20);
+				 var dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+				 lng += dlng;
+			 
+			   points.push({latitude:( lat / 1E5),longitude:( lng / 1E5)})  
+			 
+			  }
+			  return points
+			}
+		</script>
+		
+		
 		<!-- Map -->
 		<script>
+			// initialisation de la carte
+			
 			var map;
 			require(["esri/map",
 				"dojo/domReady!",
 				"esri/geometry/webMercatorUtils", 
 				"esri/symbols/PictureMarkerSymbol",
+				"esri/symbols/SimpleLineSymbol",
 				"esri/geometry/Point",
+				"esri/geometry/Polyline",
 				"esri/SpatialReference",
 				"esri/graphic",
-				"dojo/request"], function(Map, dom, webMercatorUtils, PictureMarkerSymbol, Point, SpatialReference, Graphic, request) {
+				"esri/Color",
+				"dojo/request"], function(Map, dom, webMercatorUtils, PictureMarkerSymbol, SimpleLineSymbol, Point, Polyline, SpatialReference, Graphic, Color, request) {
 				map = new Map("map", {
 					basemap: "topo",
 					center: [3.05563,50.63188],
 					zoom: 13
 				});
 				
+				
+				// listener pour le click
+				
 				map.on("click", clickFonction);
 				
+				// compteur de clics
+				
 				clickCounter = 0;
+				
+				// fonction de calcul d'itinéraire déclenchée par un clic
+				
 				function clickFonction(evt){
-					if (clickCounter == 0){
-						map.graphics.clear();
+					if (clickCounter == 0){ // si aucun point de départ n'a déjà été défini ou si un itinéraire a déjà été calculé on repart à 0
+						map.graphics.clear(); // on vide la couche graphic
 						mapPointStart = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
-						var pointClick = new Point(mapPointStart.x, mapPointStart.y, new SpatialReference({'wkid': 4326}));
-						console.log(pointClick);
-						var marker = new PictureMarkerSymbol("markerGreen.png",287/12,440/12);
-						marker.setOffset(0,14);
-						var graphicStart = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointStart), marker);
-						map.graphics.add(graphicStart);						
-						clickCounter += 1;
-					} else if (clickCounter == 1){
-						var mapPointEnd = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
-						var pointClick = new Point(mapPointEnd.x, mapPointEnd.y, new SpatialReference({'wkid': 4326}));
-						console.log(pointClick);
-						var marker = new PictureMarkerSymbol("markerRed.png",287/12,440/12);
-						var graphicEnd = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointEnd), marker);
-						map.graphics.add(graphicEnd);
-						clickCounter = 0;
+						var pointClick = new Point(mapPointStart.x, mapPointStart.y, new SpatialReference({'wkid': 4326})); // création d'un point
+						var marker = new PictureMarkerSymbol("markerGreen.png",287/12,440/12); // création d'un marker
+						marker.setOffset(0,14); // ajout d'un offset pour que le point s'affiche bien sur la carte
+						graphicStart = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointStart), marker); // création d'un objet Graphic
+						map.graphics.add(graphicStart); // ajout du graphic à la carte						
+						clickCounter += 1; // passe le compteur à 1
 						
+					} else if (clickCounter == 1){ // si le point de départ est déjà défini
+						var mapPointEnd = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); // récupére les coordonnées du clic en WGS84
+						var pointClick = new Point(mapPointEnd.x, mapPointEnd.y, new SpatialReference({'wkid': 4326})); // création d'un point
+						var marker = new PictureMarkerSymbol("markerRed.png",287/12,440/12); // création d'un marker
+						marker.setOffset(0,14); // ajout d'un offset pour que le point s'affiche bien sur la carte
+						graphicEnd = new Graphic(webMercatorUtils.geographicToWebMercator(mapPointEnd), marker); // création d'un objet Graphic
+						map.graphics.add(graphicEnd); // ajout du graphic à la carte		
+						clickCounter = 0; // on remet les compteur à 0 pour calculer un nouvel itinéraire
+						
+						// récupération des coordonnées pour le calcul d'intinéraire
 						var xStart = mapPointStart.x;
 						var yStart = mapPointStart.y;
 						var xEnd = mapPointEnd.x;
 						var yEnd = mapPointEnd.y;
-						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd;
-						console.log(urlOsrm);
-						request(urlOsrm, {
-							headers: {
-								"X-Requested-With": null
-							},
-							withCredentials: true
-						}).then(function(response){
-							console.log(response);
+						
+						// écriture de l'URL pour l'utilisation de l'API OSRM
+						urlOsrm = "http://router.project-osrm.org/route/v1/driving/" + xStart + "," + yStart + ";" + xEnd + "," + yEnd +"?overview=full";
+						
+						// requête AJAX à l'aide de DOJO sur OSRM
+						request(urlOsrm,{handleAs: "json"}).then(function(response){
+							var response = decode(response.routes[0].geometry); // decode du format de geometry compressé par l'algo Google
+							var polylineArray = [];
+							for (let var1 of response){ // récupération des coordonnées pour construire la polyligne
+								polylineArray.push([var1.longitude,var1.latitude]);
+							}
+							var polylineOsrm = new Polyline(polylineArray); // création de l'objet polyligne
+							var lineSymbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0, 77, 168, 0.5]), 4); // style de la polyligne
+							polylineGraphic = new Graphic(polylineOsrm, lineSymbol); // création de l'objet graphic
+							map.graphics.clear(); // on vide la couche graphic pour que la polyligne ne soit pas devant les markers
+							
+							// ajout de l'itinéraire et des points de départ et d'arrivée sur la carte
+							map.graphics.add(polylineGraphic); 
+							map.graphics.add(graphicStart);
+							map.graphics.add(graphicEnd);
 						});
-						/*geoJson = `{
-  "distance": 90.0,
-  "duration": 300.0,
-  "weight": 300.0,
-  "weight_name": "duration",
-  "geometry": {"type": "LineString", "coordinates": [[3.0252, 50.6247], [3.0355, 50.6245], [3.0585, 50.6373], [3.0992, 50.6287]]},
-  "legs": [
-    {
-      "distance": 30.0,
-      "duration": 100.0,
-      "steps": []
-    },
-    {
-      "distance": 60.0,
-      "duration": 200.0,
-      "steps": []
-    }
-  ]
-}`;
-						geoJson = JSON.parse(geoJson);
-						console.log(geoJson);*/
 					}
 				}
 			});

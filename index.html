@@ -125,9 +125,9 @@
 						request(urlOsrm,{handleAs: "json"}).then(function(response){
 							var response = decode(response.routes[0].geometry); // decode du format de geometry compressé par l'algo Google
 							var polylineArray = [];
-							for (let var1 of response){ // récupération des coordonnées pour construire la polyligne
+							response.forEach(function(var1){ // récupération des coordonnées pour construire la polyligne
 								polylineArray.push([var1.longitude,var1.latitude]);
-							}
+							});
 							var polylineOsrm = new Polyline(polylineArray); // création de l'objet polyligne
 							var lineSymbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0, 77, 168, 0.5]), 4); // style de la polyligne
 							polylineGraphic = new Graphic(polylineOsrm, lineSymbol); // création de l'objet graphic
